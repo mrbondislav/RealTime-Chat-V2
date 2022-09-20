@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import { Router } from "express";
 import UserModel from "./model/userModel.js";
 import bcrypt from "bcrypt";
+import messageModel from "./model/messageModel.js";
 
 //UserController
 const register = async (req, res, next) => {
@@ -61,18 +62,77 @@ const setAvatar = async (req, res, next) => {
     }
 };
 
+const getAllUsers = async (req, res, next) => {
+    try {
+        const users = await UserModel.find({ _id: { $ne: req.params.id } }).select([
+            "email",
+            "username",
+            "avatarImage",
+            "_id",
+        ]);
+        return res.json(users);
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+//MessagesController
+const addMessage = async (req, res, next) => {
+    try {
+        const { from, to, message } = req.body;
+        const data = await messageModel.create({
+            message: { text: message },
+            users: [from, to],
+            sender: from
+        });
+        if (data) return res.json({ msg: "msg yspeshno dobavleno" });
+        return res.json({ msg: "failed ;(" })
+    } catch (error) {
+        next(error);
+    }
+};
+
+const getAllMessage = async (req, res, next) => {
+    try {
+        const { from, to } = req.body;
+        const messages = await messageModel.find({
+            users: {
+                $all: [from, to],
+            },
+        }).sort({ updatedAt: 1 });
+        const projectMessages = messages.map((msg) => {
+            return {
+                fromSelf: msg.sender.toString() === from,
+                message: msg.message.text,
+            };
+        });
+        res.json(projectMessages);
+    } catch (error) {
+        next(error)
+    }
+};
+
+
+
 
 //UserRoutes
-const router = Router();
-router.post("/register", register);
-router.post("/login", login);
-router.post("/setAvatar/:id", setAvatar);
+const uRouter = Router();
+uRouter.post("/register", register);
+uRouter.post("/login", login);
+uRouter.post("/setAvatar/:id", setAvatar);
+uRouter.get("/allusers/:id", getAllUsers);
 
+//MsgRoutes
+const mRouter = Router();
+mRouter.post("/addmsg/", addMessage);
+mRouter.post("/getmsg/", getAllMessage);
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use("/api/auth", router)
+app.use("/api/auth", uRouter)
+app.use("/api/messages", mRouter)
 
 mongoose
     .connect("mongodb+srv://mrbondislav:root@cluster0.vxvl5.mongodb.net/chat?retryWrites=true&w=majority", {
