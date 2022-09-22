@@ -5,6 +5,7 @@ import { Router } from "express";
 import UserModel from "./model/userModel.js";
 import bcrypt from "bcrypt";
 import messageModel from "./model/messageModel.js";
+import { Server } from "socket.io";
 
 //UserController
 const register = async (req, res, next) => {
@@ -77,6 +78,16 @@ const getAllUsers = async (req, res, next) => {
     }
 };
 
+const logOut = (req, res, next) => {
+    try {
+        if (!req.params.id) return res.json({ msg: "User id is required " });
+        onlineUsers.delete(req.params.id);
+        return res.status(200).send();
+    } catch (ex) {
+        next(ex);
+    }
+};
+
 //MessagesController
 const addMessage = async (req, res, next) => {
     try {
@@ -122,6 +133,7 @@ uRouter.post("/register", register);
 uRouter.post("/login", login);
 uRouter.post("/setAvatar/:id", setAvatar);
 uRouter.get("/allusers/:id", getAllUsers);
+uRouter.get("/logout/:id", logOut);
 
 //MsgRoutes
 const mRouter = Router();
@@ -146,4 +158,28 @@ mongoose
 
 const server = app.listen(5000, () => {
     console.log('Server started');
+});
+
+
+const io = new Server(server, {
+    cors: {
+        origin: "http://localhost:3000",
+        credentials: true,
+    },
+});
+
+global.onlineUsers = new Map();
+
+io.on("connection", (socket) => {
+    global.chatSocket = socket;
+    socket.on("add-user", (userId) => {
+        onlineUsers.set(userId, socket.id);
+    });
+
+    socket.on("send-msg", (data) => {
+        const sendUserSocket = onlineUsers.get(data.to);
+        if (sendUserSocket) {
+            socket.to(sendUserSocket).emit("msg-recieve", data.msg);
+        }
+    });
 });
