@@ -12,7 +12,7 @@ app.use("/api/auth", uRouter)
 app.use("/api/messages", mRouter)
 
 mongoose
-    .connect("mongodb+srv://mrbondislav:root@cluster0.vxvl5.mongodb.net/chat?retryWrites=true&w=majority", {
+    .connect(process.env.MONGODB_URI, {
     })
     .then(() => {
         console.log("DB connected")
@@ -21,7 +21,7 @@ mongoose
         console.log(err.message);
     });
 
-const server = app.listen(5000, () => {
+const server = app.listen(process.env.PORT || 5000, () => {
     console.log('Server started');
 });
 
