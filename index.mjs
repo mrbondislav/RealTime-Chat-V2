@@ -4,6 +4,8 @@ import mongoose from "mongoose";
 import { Server } from "socket.io";
 import { uRouter } from "./routes/auth.mjs";
 import { mRouter } from "./routes/messages.mjs";
+import dotenv from "dotenv";
+dotenv.config();
 
 const app = express();
 app.use(cors());
@@ -12,8 +14,7 @@ app.use("/api/auth", uRouter)
 app.use("/api/messages", mRouter)
 
 mongoose
-    .connect(process.env.MONGODB_URI, {
-    })
+    .connect(process.env.REACT_APP_MONGODB)
     .then(() => {
         console.log("DB connected")
     })
